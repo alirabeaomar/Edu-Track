@@ -7,7 +7,7 @@ export const metadata = {
   description: 'منصة تتبع التعليم والتطوير',
 };
 
-export default function RootLayout({ children }) {
+export default function RootLayout({ children } : {children : React.ReactNode}) {
   return (
     <html lang="ar" dir="rtl">
       <body className="flex flex-col min-h-screen bg-white text-gray-900">

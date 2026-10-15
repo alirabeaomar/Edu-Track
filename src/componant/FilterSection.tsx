@@ -32,8 +32,7 @@ export default function FilterSection() {
   // جلب الكليات الخاصة بالجامعة المختارّة
   const getThirdOptions = (): string[] => {
     if (selectedFirst === "government" && selectedSecond) {
-      return governmentUniversities[selectedSecond] || [];
-    }
+return governmentUniversities[selectedSecond as keyof typeof governmentUniversities] || [];    }
     return [];
   };
 
