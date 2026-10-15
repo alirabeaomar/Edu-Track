@@ -54,7 +54,7 @@ export default function Footer() {
 
               {/* فيسبوك */}
               <a 
-                href="https://facebook.com" 
+                href="https://www.facebook.com/share/1HY165mn96/" 
                 target="_blank" 
                 rel="noopener noreferrer"
                 className="bg-blue-800 hover:bg-blue-700 p-2.5 rounded-full transition text-white"
@@ -67,7 +67,7 @@ export default function Footer() {
 
               {/* إنستجرام */}
               <a 
-                href="https://instagram.com" 
+                href="https://instagram.com/edutrack8?cplk=MTluNHVobGtiMXk3cQ%3D%3D" 
                 target="_blank" 
                 rel="noopener noreferrer"
                 className="bg-blue-800 hover:bg-blue-700 p-2.5 rounded-full transition text-white"
