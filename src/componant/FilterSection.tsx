@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import governmentUniversities from "@/data/governmentUniversities";
+import allPrivateUniversitiesDetails from "@/data/allPrivateUniversitiesDetails"; // ملف الجامعات الخاصة
 import { collegeDetailsData } from "@/data/collegeDetailsData";
 import CollegeCard from "./CollegeCard";
 
@@ -21,10 +22,33 @@ export default function FilterSection() {
     { id: "private", name: "جامعة خاصة" },
   ];
 
+  // دالة ذكية ونظيفة لتجميع الكليات تحت جامعاتها الخاصة ديناميكياً بدون تكرار
+  const getPrivateUniversities = () => {
+    const map: Record<string, string[]> = {};
+    
+    Object.keys(allPrivateUniversitiesDetails).forEach((collegeKey) => {
+      // استخراج اسم الجامعة بعد كلمة "جامعة" أو من نهاية النص بذكاء
+      const match = collegeKey.match(/جامعة\s+(.+)$/);
+      const universityName = match ? `جامعة ${match[1]}` : "أخرى";
+
+      if (!map[universityName]) {
+        map[universityName] = [];
+      }
+      map[universityName].push(collegeKey);
+    });
+    
+    return map;
+  };
+
+  const privateUniversitiesMap = getPrivateUniversities();
+
   // جلب الجامعات بناءً على النوع المختار
   const getSecondOptions = (): string[] => {
     if (selectedFirst === "government") {
       return Object.keys(governmentUniversities);
+    } 
+    if (selectedFirst === "private") {
+      return Object.keys(privateUniversitiesMap);
     }
     return [];
   };
@@ -32,7 +56,11 @@ export default function FilterSection() {
   // جلب الكليات الخاصة بالجامعة المختارّة
   const getThirdOptions = (): string[] => {
     if (selectedFirst === "government" && selectedSecond) {
-return governmentUniversities[selectedSecond as keyof typeof governmentUniversities] || [];    }
+      return governmentUniversities[selectedSecond as keyof typeof governmentUniversities] || [];
+    } 
+    if (selectedFirst === "private" && selectedSecond) {
+      return privateUniversitiesMap[selectedSecond] || [];
+    }
     return [];
   };
 
@@ -41,16 +69,18 @@ return governmentUniversities[selectedSecond as keyof typeof governmentUniversit
     return firstOptions.find((opt) => opt.id === selectedFirst)?.name || "اختر النوع...";
   };
 
-  // دالة ذكية ومرنة لجلب بيانات الكلية لضمان ظهور الكارد دائماً
+  // دالة لجلب بيانات الكلية
   const getCollegeData = () => {
     if (!selectedThird) return null;
 
-    // 1. مطابقة تامة لاسم الكلية في الداتا
+    if (selectedFirst === "private" && allPrivateUniversitiesDetails[selectedThird]) {
+      return allPrivateUniversitiesDetails[selectedThird];
+    }
+
     if (collegeDetailsData[selectedThird]) {
       return collegeDetailsData[selectedThird];
     }
 
-    // 2. مطابقة مرنة (لو الاسم يحتوي على كلمة هندسة، طب، صيدلة، حاسبات...)
     const foundKey = Object.keys(collegeDetailsData).find((key) => 
       selectedThird.includes(key) || key.includes(selectedThird)
     );
@@ -58,10 +88,6 @@ return governmentUniversities[selectedSecond as keyof typeof governmentUniversit
     if (foundKey) {
       return collegeDetailsData[foundKey];
     }
-
-    // 3. قالب افتراضي آمن يمنع اختفاء الكارد لأي كلية أخرى
-    
-
   };
 
   const currentCollegeData = getCollegeData();
@@ -73,7 +99,7 @@ return governmentUniversities[selectedSecond as keyof typeof governmentUniversit
         {/* حاوية الاختيارات Responsive Grid */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 bg-blue-50 p-6 rounded-2xl shadow-md border border-blue-100">
           
-          {/* 1. نوع الجامعة */}
+          {/* نوع الجامعة */}
           <div className="flex flex-col relative">
             <label className="text-blue-900 font-semibold mb-2 text-sm">
               1. نوع الجامعة
