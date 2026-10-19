@@ -1,0 +1,10 @@
+
+
+
+
+
+
+// استيراد بيانات الكليات لتغذية النموذج بها
+import allPrivateUniversitiesDetails from "@/data/allPrivateUniversitiesDetails";
+import allNationalUniversitiesDetails from "@/data/allNationalUniversitiesDetails";
+import collegeDetailsData from "@/data/collegeDetailsData";
