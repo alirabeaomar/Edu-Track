@@ -1,65 +1,112 @@
 import { NextResponse } from "next/server";
-import { GoogleGenerativeAI } from "@google/generative-ai";
 
 export async function POST(req: Request) {
   try {
-    const body = await req.json();
-    const messages = body.messages;
+    const { messages } = await req.json();
 
-    if (!messages || !Array.isArray(messages)) {
-      return NextResponse.json({ text: "البيانات المرسلة غير صحيحة." }, { status: 400 });
+    if (!Array.isArray(messages) || messages.length === 0) {
+      return NextResponse.json(
+        { text: "من فضلك اكتب رسالة أولًا." },
+        { status: 400 }
+      );
     }
 
-    // الاعتماد على متغير البيئة فقط لتنبني معايير الأمان ولتجنب حظر GitHub
     const apiKey = process.env.GEMINI_API_KEY;
 
     if (!apiKey) {
       return NextResponse.json(
-        { text: "خطأ: لم يتم ضبط مفتاح Gemini API في متغيرات البيئة (GEMINI_API_KEY)." },
+        { text: "مفتاح Gemini API غير موجود في ملف .env.local" },
         { status: 500 }
       );
     }
 
-    const genAI = new GoogleGenerativeAI(apiKey);
+    const contents = messages
+      .filter(
+        (m: { sender?: string; text?: string }) =>
+          typeof m.text === "string" &&
+          m.text.trim() &&
+          ["user", "assistant", "model"].includes(m.sender || "")
+      )
+      .map((m: { sender: string; text: string }) => ({
+        role: m.sender === "user" ? "user" : "model",
+        parts: [{ text: m.text }],
+      }));
 
-    const systemInstruction = `
-      أنت مرشد أكاديمي ومستشار قبول جامعي ذكي للطلاب في مصر.
-      مهمتك مساعدة الطالب في تحديد الكلية والجامعة المناسبة لشغفه ومجموعه وشعبته بأسلوب ودود ومجشع.
-      اقترح من 2 إلى 4 كليات مناسبة مع توضيح السبب ومجالات العمل، واجعل الإجابة في نقاط واضحة ومنسقة.
-    `;
-// ✅ السطر المحدث والمضمون:
-// ✅ النماذج المحدثة والرسمية الموصى بها من Google
-    const model = genAI.getGenerativeModel({
-      model: "gemini-3.8-flash",
-      systemInstruction: systemInstruction,
-    });
-    // تحويل الرسائل للنسق الذي يطلبه Gemini
-    let chatHistory = messages.map((m: { sender: string; text: string }) => ({
-      role: m.sender === "user" ? "user" : "model",
-      parts: [{ text: m.text }],
-    }));
-
-    // التأكد تماماً أن أول رسالة في التاريخ هي دور 'user'
-    while (chatHistory.length > 0 && chatHistory[0].role === "model") {
-      chatHistory.shift();
+    if (
+      !contents.length ||
+      contents[contents.length - 1].role !== "user"
+    ) {
+      return NextResponse.json(
+        { text: "تأكد أن آخر رسالة من المستخدم." },
+        { status: 400 }
+      );
     }
 
-    // أخذ آخر رسالة للمستخدم لإرسالها كرسالة حالية
-    const lastMessage = chatHistory.pop();
-    
-    if (!lastMessage || lastMessage.role !== "user") {
-      return NextResponse.json({ text: "عذراً، يجب أن تبدأ المحادثة برسالة من المستخدم." }, { status: 400 });
+    const response = await fetch(
+      "https://generativelanguage.googleapis.com/v1beta/models/gemini-3.5-flash-lite:generateContent",
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "x-goog-api-key": apiKey,
+        },
+        body: JSON.stringify({
+          system_instruction: {
+            parts: [
+              {
+                text: `
+                  أنت مرشد أكاديمي للطلاب في مصر.
+                  ساعد الطالب في اختيار الكلية والجامعة المناسبة
+                  حسب المجموع والشعبة والاهتمامات.
+                  اقترح من كليتين إلى أربع كليات عند توفر المعلومات.
+                  وضح أسباب الاختيار ومجالات العمل.
+                  لا تخترع معلومات عن التنسيق أو شروط القبول.
+                  أجب باللغة العربية المصرية بأسلوب ودود وواضح.
+                `,
+              },
+            ],
+          },
+          contents,
+          generationConfig: {
+            temperature: 0.7,
+            maxOutputTokens: 1200,
+          },
+        }),
+      }
+    );
+
+    const data = await response.json();
+
+    if (!response.ok) {
+      console.error("Gemini API error:", response.status, data);
+
+      return NextResponse.json(
+        {
+          text: `خطأ Gemini (${response.status}): ${
+            data.error?.message || "تعذر الحصول على إجابة."
+          }`,
+        },
+        { status: 502 }
+      );
     }
 
-    const chat = model.startChat({ history: chatHistory });
-    const result = await chat.sendMessage(lastMessage.parts[0].text);
-    const responseText = result.response.text();
+    const text = data.candidates?.[0]?.content?.parts
+      ?.map((part: { text?: string }) => part.text || "")
+      .join("");
 
-    return NextResponse.json({ text: responseText });
-  } catch (error: any) {
-    console.error("Chat API Detailed Error:", error);
+    if (!text) {
+      return NextResponse.json(
+        { text: "لم تصل إجابة من Gemini. حاول مرة أخرى." },
+        { status: 502 }
+      );
+    }
+
+    return NextResponse.json({ text });
+  } catch (error) {
+    console.error("Chatbot error:", error);
+
     return NextResponse.json(
-      { text: `عذراً، حدث خطأ في الخادم: ${error.message || "خطأ غير معروف"}` },
+      { text: "حصل خطأ في الخادم. راجع Terminal لمعرفة السبب." },
       { status: 500 }
     );
   }
