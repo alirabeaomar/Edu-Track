@@ -27,12 +27,12 @@ export async function POST(req: Request) {
       مهمتك مساعدة الطالب في تحديد الكلية والجامعة المناسبة لشغفه ومجموعه وشعبته بأسلوب ودود ومجشع.
       اقترح من 2 إلى 4 كليات مناسبة مع توضيح السبب ومجالات العمل، واجعل الإجابة في نقاط واضحة ومنسقة.
     `;
-
+// ✅ السطر المحدث والمضمون:
+// ✅ النماذج المحدثة والرسمية الموصى بها من Google
     const model = genAI.getGenerativeModel({
-      model: "gemini-1.5-flash",
+      model: "gemini-3.8-flash",
       systemInstruction: systemInstruction,
     });
-
     // تحويل الرسائل للنسق الذي يطلبه Gemini
     let chatHistory = messages.map((m: { sender: string; text: string }) => ({
       role: m.sender === "user" ? "user" : "model",
