@@ -10,7 +10,15 @@ export async function POST(req: Request) {
       return NextResponse.json({ text: "البيانات المرسلة غير صحيحة." }, { status: 400 });
     }
 
-    const apiKey = "AQ.Ab8RN6LJKm72CHwpZPwzA70bp7VmaFk0ImdvM1RhG94jsmGdBw";
+    // الاعتماد على متغير البيئة فقط لتنبني معايير الأمان ولتجنب حظر GitHub
+    const apiKey = process.env.GEMINI_API_KEY;
+
+    if (!apiKey) {
+      return NextResponse.json(
+        { text: "خطأ: لم يتم ضبط مفتاح Gemini API في متغيرات البيئة (GEMINI_API_KEY)." },
+        { status: 500 }
+      );
+    }
 
     const genAI = new GoogleGenerativeAI(apiKey);
 
@@ -21,7 +29,7 @@ export async function POST(req: Request) {
     `;
 
     const model = genAI.getGenerativeModel({
-      model: "gemini-3.8-flash",
+      model: "gemini-1.5-flash",
       systemInstruction: systemInstruction,
     });
 
