@@ -7,6 +7,7 @@ import CollegeChatbot from "../componant/CollegeChatbot";
 export default function Home() {
   return (
     <div>
+
       <HeroBanner/> 
       <InfoToPage/>
       <CollegeChatbot/>
